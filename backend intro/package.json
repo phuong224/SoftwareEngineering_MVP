@@ -1,0 +1,28 @@
+{
+  "name": "backend-intro",
+  "version": "1.0.0",
+  "description": "tutorial backend code",
+  "homepage": "https://github.com/BuiPThinh-2313257/backend-intro#readme",
+  "bugs": {
+    "url": "https://github.com/BuiPThinh-2313257/backend-intro/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BuiPThinh-2313257/backend-intro.git"
+  },
+  "license": "ISC",
+  "author": "Thinh",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/src/index.js",
+    "dev": "nodemon backend/src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mongoose": "^9.0.0",
+    "nodemon": "^3.1.11"
+  }
+}

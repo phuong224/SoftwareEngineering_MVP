@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* HCMUT Blue Theme */
+    --background: 0 0% 100%;
+    --foreground: 220 15% 25%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 25%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 25%;
+
+    /* Primary: HCMUT Blue */
+    --primary: 202 87% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 202 87% 45%;
+    --primary-light: 202 87% 95%;
+
+    /* Secondary */
+    --secondary: 210 17% 95%;
+    --secondary-foreground: 220 15% 25%;
+
+    --muted: 210 17% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent */
+    --accent: 202 87% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 202 87% 55%;
+
+    --radius: 0.5rem;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
+  .dark {
+    --background: 220 15% 10%;
+    --foreground: 210 17% 95%;
+
+    --card: 220 15% 12%;
+    --card-foreground: 210 17% 95%;
+
+    --popover: 220 15% 12%;
+    --popover-foreground: 210 17% 95%;
+
+    --primary: 202 87% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 202 87% 65%;
+    --primary-light: 202 87% 20%;
+
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 210 17% 95%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 9% 60%;
+
+    --accent: 202 87% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 210 17% 95%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 202 87% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
