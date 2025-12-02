@@ -255,7 +255,7 @@ const Profile = () => {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8">
-          <p>Không tìm thấy thông tin profile</p>
+          <p>Không tìm thấy thông tin</p>
         </div>
       </Layout>
     );
@@ -272,7 +272,7 @@ const Profile = () => {
     <Layout>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 text-foreground">
-          Personal Profile Management
+          Quản lí thông tin cá nhân
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -306,7 +306,7 @@ const Profile = () => {
                 <div className="flex items-center gap-2">
                   <Pencil className="h-5 w-5 text-muted-foreground" />
                   <h3 className="text-lg font-semibold text-card-foreground">
-                    Personal Information
+                    Thông tin cá nhân
                   </h3>
                 </div>
                 <Button variant="ghost" size="sm" className="text-primary" onClick={handleEditClick}>
@@ -365,26 +365,26 @@ const Profile = () => {
                 <div className="flex items-center gap-2">
                   <CheckSquare className="h-5 w-5 text-muted-foreground" /> 
                   <h3 className="text-lg font-semibold text-card-foreground">
-                    Lịch hẹn sắp tới ({schedule.length} gần nhất)
+                    Lịch của tôi
                   </h3>
                 </div>
                 <Button variant="ghost" size="sm" className="text-primary">
-                  View All
+                  Xem tất cả
                 </Button>
               </div>
               
               {/* HIỂN THỊ DỮ LIỆU BOOKING TỪ STATE */}
               {loadingSchedule ? (
-                <p className="text-sm text-center text-muted-foreground">Đang tải lịch hẹn...</p>
+                <p className="text-sm text-center text-muted-foreground">Đang tải lịch học...</p>
               ) : schedule.length === 0 ? (
-                <p className="text-sm text-center text-muted-foreground">Không có lịch hẹn sắp tới nào.</p>
+                <p className="text-sm text-center text-muted-foreground">Không có lịch học sắp tới nào.</p>
               ) : (
                 <div className="space-y-3">
                   {schedule.map((item, index) => (
                     <div key={item._id}>
                       <div className="flex justify-between items-start mb-1">
                         <span className="text-card-foreground font-medium">
-                          Gia sư: {item.tutorId.fullname || item.tutorId.username}
+                          Tutor: {item.tutorId.fullname || item.tutorId.username}
                         </span>
                         
                         {/* Hiển thị Badge theo trạng thái */}
