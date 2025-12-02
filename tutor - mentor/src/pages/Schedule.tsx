@@ -334,7 +334,7 @@ const Schedule = () => {
                                     <p className="text-sm font-medium text-muted-foreground">Tutor: {tutorName}</p>
                                 </div>
                                 <Badge className={apt.status === 'pending' ? "bg-yellow-500 hover:bg-yellow-600" : "bg-primary hover:bg-primary/90"}>
-                                    {apt.status === 'pending' ? "Chờ duyệt" : "Đã chốt"}
+                                    {apt.status === 'pending' ? "Chờ duyệt" : "Đã duyệt"}
                                 </Badge>
                             </div>
 

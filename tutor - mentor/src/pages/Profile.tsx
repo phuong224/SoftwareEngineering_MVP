@@ -20,7 +20,11 @@ import {
   Clock, 
   Shield, 
   Pencil,
-  ExternalLink
+  ExternalLink,
+  // === IMPORT ICONS MỚI ===
+  Video, 
+  MapPin 
+  // =========================
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +46,7 @@ interface UserProfile {
   rating?: number;
 }
 
-// Interface cho dữ liệu Booking trả về từ getStudentBookingsAPI
+// Interface cho dữ liệu Booking trả về (Dựa trên Appointment)
 interface BookingItem {
     _id: string;
     tutorId: {
@@ -51,12 +55,37 @@ interface BookingItem {
         fullname?: string;
         subject?: string[]; // Mảng môn học của gia sư
     };
-    startTime?: string; // Đã sửa thành startTime
-    endTime?: string;   // Đã sửa thành endTime
-    meetingType: "online" | "offline";
+    startTime?: string; 
+    endTime?: string;   
+    meetingType: "online" | "offline"; // Đã có trường này
     status: "pending" | "confirmed" | "cancelled" | "draft" | "completed";
     note?: string;
 }
+
+// Hàm trợ giúp để xác định Badge hiển thị
+const getStatusBadge = (status: BookingItem['status']) => {
+    switch (status) {
+        case 'confirmed':
+            return (
+                <Badge 
+                    variant="secondary" 
+                    className="ml-auto text-xs font-normal bg-green-100 text-green-800 border-green-500"
+                >
+                    Đã xác nhận
+                </Badge>
+            );
+        case 'pending':
+        default:
+            return (
+                <Badge 
+                    variant="secondary" 
+                    className="ml-auto text-xs font-normal bg-yellow-100 text-yellow-800 border-yellow-500"
+                >
+                    Chờ duyệt
+                </Badge>
+            );
+    }
+};
 
 
 const Profile = () => {
@@ -104,24 +133,33 @@ const Profile = () => {
     }
   };
 
-  // Hàm tải lịch học mới
+  // Hàm tải lịch học
   const loadSchedule = async () => {
     try {
       setLoadingSchedule(true);
-      // Gọi API lấy tất cả bookings của sinh viên
+      const now = new Date().getTime(); // Lấy timestamp hiện tại
       const allBookings: BookingItem[] = await getStudentBookingsAPI(CURRENT_USER_ID); 
       
-      // *** ĐIỀU CHỈNH LỌC: CHỈ LẤY LỊCH CÓ STATUS LÀ 'PENDING' ***
-      const pendingSchedule = allBookings.filter(booking => 
-        booking.status === 'pending' // Đã dùng 'pending' (chữ thường)
+      // Lọc: Chỉ lấy các booking 'pending' hoặc 'confirmed' VÀ chưa kết thúc (endTime > now)
+      const relevantBookings = allBookings.filter(booking => {
+          const isRelevantStatus = booking.status === 'pending' || booking.status === 'confirmed';
+          
+          // Chuyển endTime thành timestamp để so sánh.
+          const endTimeMs = new Date(booking.endTime || '').getTime(); 
+          // Chỉ giữ lại những sự kiện chưa kết thúc (endTime ở tương lai)
+          const isUpcoming = endTimeMs > now; 
+          
+          return isRelevantStatus && isUpcoming; 
+      });
+      
+      // Sắp xếp theo thời gian bắt đầu (gần nhất lên đầu)
+      relevantBookings.sort((a, b) => 
+          new Date(a.startTime || '').getTime() - new Date(b.startTime || '').getTime()
       );
       
-      // Sắp xếp theo thời gian bắt đầu (tùy chọn)
-      pendingSchedule.sort((a, b) => 
-        new Date(a.startTime || '').getTime() - new Date(b.startTime || '').getTime() // Dùng startTime
-      );
-      
-      setSchedule(pendingSchedule);
+      // Chỉ lấy 3 booking gần nhất
+      const nearestThree = relevantBookings.slice(0, 3);
+      setSchedule(nearestThree);
       
     } catch (error: any) {
       console.error("Lỗi tải lịch học:", error);
@@ -321,13 +359,13 @@ const Profile = () => {
               </div>
             </Card>
 
-            {/* Teaching Schedule Card (Lịch hẹn đang chờ) */}
+            {/* Teaching Schedule Card (Lịch hẹn sắp tới - ĐÃ CẬP NHẬT) */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <CheckSquare className="h-5 w-5 text-muted-foreground" />
+                  <CheckSquare className="h-5 w-5 text-muted-foreground" /> 
                   <h3 className="text-lg font-semibold text-card-foreground">
-                    My Schedule
+                    Lịch hẹn sắp tới ({schedule.length} gần nhất)
                   </h3>
                 </div>
                 <Button variant="ghost" size="sm" className="text-primary">
@@ -337,25 +375,20 @@ const Profile = () => {
               
               {/* HIỂN THỊ DỮ LIỆU BOOKING TỪ STATE */}
               {loadingSchedule ? (
-                <p className="text-sm text-center text-muted-foreground">Đang tải lịch học...</p>
+                <p className="text-sm text-center text-muted-foreground">Đang tải lịch hẹn...</p>
               ) : schedule.length === 0 ? (
-                <p className="text-sm text-center text-muted-foreground">Không có lịch học nào.</p>
+                <p className="text-sm text-center text-muted-foreground">Không có lịch hẹn sắp tới nào.</p>
               ) : (
                 <div className="space-y-3">
                   {schedule.map((item, index) => (
                     <div key={item._id}>
                       <div className="flex justify-between items-start mb-1">
                         <span className="text-card-foreground font-medium">
-                          Tutor: {item.tutorId.fullname || item.tutorId.username}
+                          Gia sư: {item.tutorId.fullname || item.tutorId.username}
                         </span>
                         
-                        {/* Đổi thành "Chờ duyệt" và căn phải */}
-                        <Badge 
-                            variant="secondary" 
-                            className="ml-auto text-xs font-normal bg-yellow-100 text-yellow-800 border-yellow-500"
-                        >
-                            Chờ duyệt
-                        </Badge>
+                        {/* Hiển thị Badge theo trạng thái */}
+                        {getStatusBadge(item.status)}
                       </div>
                       
                       <p className="text-sm text-muted-foreground">
@@ -366,14 +399,28 @@ const Profile = () => {
                                 : "Chưa rõ"}
                         </span>
                       </p>
+                      
                       <p className="text-sm text-muted-foreground">
-                        Thời gian: 
-                        {/* In đậm giá trị thời gian */}
-                        <span className="font-bold text-card-foreground ml-1">
+                        Thời gian:&nbsp;
+                        {/* IN ĐẬM CẢ THỜI GIAN VÀ NGÀY */}
+                        <span className="font-bold text-card-foreground">
                             {formatTime(item.startTime)} - {formatTime(item.endTime)} | {formatDate(item.startTime)}
-                        </span> 
+                        </span>
                       </p>
                       
+                      {/* DÒNG MỚI: Hình thức và địa điểm */}
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        {item.meetingType === 'online' ? (
+                            <>
+                                <Video className="h-4 w-4 text-green-500" /> Google Meet
+                            </>
+                        ) : (
+                            <>
+                                <MapPin className="h-4 w-4 text-red-500" /> H6-101
+                            </>
+                        )}
+                      </p>
+
                       {/* Thêm Separator sau mỗi item, trừ item cuối cùng */}
                       {index < schedule.length - 1 && <Separator className="mt-3" />}
                     </div>
