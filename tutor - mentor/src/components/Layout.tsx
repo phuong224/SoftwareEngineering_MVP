@@ -30,7 +30,7 @@ const Layout = ({ children }: LayoutProps) => {
       {/* Header */}
       <header className="bg-primary text-primary-foreground shadow-md">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/home" className="flex items-center gap-3">
             <img 
               src="/logo.png" 
               alt="HCMUT Tutor Logo" 
@@ -41,9 +41,9 @@ const Layout = ({ children }: LayoutProps) => {
 
           <nav className="hidden md:flex items-center gap-6">
             <Link
-              to="/"
+              to="/home"
               className={`hover:text-primary-foreground/80 transition-colors ${
-                isActive("/") ? "font-semibold underline" : ""
+                isActive("/home") ? "font-semibold underline" : ""
               }`}
             >
               Home
