@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // CHÚ Ý: CẬP NHẬT ĐƯỜNG DẪN SERVICE CHÍNH XÁC CỦA BẠN
 import { getUserProfileAPI, updateUserProfileAPI } from "@/service/user.service"; 
-import { getStudentBookingsAPI } from "@/service/booking.service"; // Đường dẫn đến file chứa getStudentBookingsAPI
+import { getStudentEnrollmentsAPI } from "@/service/meeting.service";
 
 const CURRENT_USER_ID = "69292f0a423919adced2aa8b"; // Tạm thời hardcode, sau này lấy từ auth
 
@@ -47,44 +47,75 @@ interface UserProfile {
 }
 
 // Interface cho dữ liệu Booking trả về (Dựa trên Appointment)
-interface BookingItem {
-    _id: string;
-    tutorId: {
-        _id: string;
-        username: string;
-        fullname?: string;
-        subject?: string[]; // Mảng môn học của gia sư
-    };
-    startTime?: string; 
-    endTime?: string;   
-    meetingType: "online" | "offline"; // Đã có trường này
-    status: "pending" | "confirmed" | "cancelled" | "draft" | "completed";
-    note?: string;
+// Interface mới cho dữ liệu Meeting (Buổi học)
+interface MeetingItem {
+    _id: string;
+    title: string;
+    description?: string;
+    startTime: string; 
+    duration: number; // Tính bằng phút
+    type: 'online' | 'offline';
+    status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+    meetingLink?: string;
+    location?: string;
+    tutor: { // Thông tin gia sư được populate
+        _id: string;
+        username: string;
+        fullname?: string;
+        subject?: string[]; 
+    };
+}
+
+// Interface cho Enrollment trả về từ getStudentEnrollmentsAPI
+// Dữ liệu này chứa Meeting được populate
+interface EnrollmentItem {
+    _id: string;
+    student: string; // ID sinh viên
+    meeting: MeetingItem; // Thông tin buổi học chi tiết
+    createdAt: string;
 }
 
 // Hàm trợ giúp để xác định Badge hiển thị
-const getStatusBadge = (status: BookingItem['status']) => {
-    switch (status) {
-        case 'confirmed':
-            return (
-                <Badge 
-                    variant="secondary" 
-                    className="ml-auto text-xs font-normal bg-green-100 text-green-800 border-green-500"
-                >
-                    Đã xác nhận
-                </Badge>
-            );
-        case 'pending':
-        default:
-            return (
-                <Badge 
-                    variant="secondary" 
-                    className="ml-auto text-xs font-normal bg-yellow-100 text-yellow-800 border-yellow-500"
-                >
-                    Chờ duyệt
-                </Badge>
-            );
-    }
+const getStatusBadge = (status: MeetingItem['status']) => {
+  switch (status) {
+    case 'scheduled':
+     return (
+      <Badge 
+        variant="secondary" 
+        className="ml-auto text-xs font-normal bg-green-100 text-green-800 border-green-500"
+      >
+        Đã lên lịch
+      </Badge>         
+     );
+    case 'ongoing':
+     return (
+      <Badge 
+        variant="secondary" 
+        className="ml-auto text-xs font-normal bg-blue-100 text-blue-800 border-blue-500"
+      >
+        Đang diễn ra
+      </Badge>
+     );
+    case 'cancelled':
+     return (
+      <Badge 
+        variant="secondary" 
+        className="ml-auto text-xs font-normal bg-red-100 text-red-800 border-red-500"
+      >
+        Đã hủy
+      </Badge>
+     );
+    case 'completed':
+     default:
+     return (
+      <Badge 
+        variant="secondary" 
+        className="ml-auto text-xs font-normal bg-gray-100 text-gray-800 border-gray-500"
+      >
+        Hoàn thành
+      </Badge>
+     );
+  }
 };
 
 
@@ -95,7 +126,7 @@ const Profile = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   
   // State mới cho Lịch học (Bookings)
-  const [schedule, setSchedule] = useState<BookingItem[]>([]); 
+  const [schedule, setSchedule] = useState<EnrollmentItem[]>([]); // Đã cập nhật kiểu
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   
   // Form state
@@ -134,139 +165,152 @@ const Profile = () => {
   };
 
   // Hàm tải lịch học
-  const loadSchedule = async () => {
-    try {
-      setLoadingSchedule(true);
-      const now = new Date().getTime(); // Lấy timestamp hiện tại
-      const allBookings: BookingItem[] = await getStudentBookingsAPI(CURRENT_USER_ID); 
-      
-      // Lọc: Chỉ lấy các booking 'pending' hoặc 'confirmed' VÀ chưa kết thúc (endTime > now)
-      const relevantBookings = allBookings.filter(booking => {
-          const isRelevantStatus = booking.status === 'pending' || booking.status === 'confirmed';
-          
-          // Chuyển endTime thành timestamp để so sánh.
-          const endTimeMs = new Date(booking.endTime || '').getTime(); 
-          // Chỉ giữ lại những sự kiện chưa kết thúc (endTime ở tương lai)
-          const isUpcoming = endTimeMs > now; 
-          
-          return isRelevantStatus && isUpcoming; 
-      });
-      
-      // Sắp xếp theo thời gian bắt đầu (gần nhất lên đầu)
-      relevantBookings.sort((a, b) => 
-          new Date(a.startTime || '').getTime() - new Date(b.startTime || '').getTime()
-      );
-      
-      // Chỉ lấy 3 booking gần nhất
-      const nearestThree = relevantBookings.slice(0, 3);
-      setSchedule(nearestThree);
-      
-    } catch (error: any) {
-      console.error("Lỗi tải lịch học:", error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải thông tin lịch học",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingSchedule(false);
-    }
-  };
+  // Hàm tải lịch học (CẬP NHẬT LOGIC DÙNG ENROLLMENTS)
+const loadSchedule = async () => {
+    try {
+      setLoadingSchedule(true);
+      const now = new Date().getTime(); // Lấy timestamp hiện tại
+      
+      // Lấy danh sách Enrollments
+      const allEnrollments: EnrollmentItem[] = await getStudentEnrollmentsAPI(CURRENT_USER_ID); 
+      
+      // Lọc: Chỉ lấy các meeting 'scheduled' hoặc 'ongoing' VÀ chưa kết thúc
+      const relevantEnrollments = allEnrollments.filter(enrollment => {
+          const meeting = enrollment.meeting;
+          const isRelevantStatus = meeting.status === 'scheduled' || meeting.status === 'ongoing';
+          
+          // Tính thời gian kết thúc (endTime = startTime + duration phút)
+          const startTimeMs = new Date(meeting.startTime).getTime();
+          const durationMs = (meeting.duration || 60) * 60 * 1000; // Đổi phút sang ms
+          const endTimeMs = startTimeMs + durationMs; 
+          
+          // Chỉ giữ lại những sự kiện chưa kết thúc (endTime ở tương lai)
+          const isUpcoming = endTimeMs > now; 
+          
+          return isRelevantStatus && isUpcoming; 
+      });
+      
+      // Sắp xếp theo thời gian bắt đầu (gần nhất lên đầu)
+      relevantEnrollments.sort((a, b) => 
+          new Date(a.meeting.startTime).getTime() - new Date(b.meeting.startTime).getTime()
+      );
+      
+      // Chỉ lấy 3 buổi học gần nhất
+      const nearestThree = relevantEnrollments.slice(0, 3);
+      setSchedule(nearestThree);
+      
+    } catch (error: any) {
+      console.error("Lỗi tải lịch học:", error);
+      toast({
+        title: "Lỗi",
+        description: "Không thể tải thông tin lịch học",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingSchedule(false);
+    }
+};
 
-  const handleEditClick = () => {
-    if (profile) {
-      setFullname(profile.fullname || "");
-      setEmail(profile.email || "");
-      setUsername(profile.username || "");
-      setSubject(profile.subject || []);
-      setExperience(profile.experience || "");
-      setIsEditOpen(true);
-    }
-  };
+const handleEditClick = () => {
+  if (profile) {
+    setFullname(profile.fullname || "");
+    setEmail(profile.email || "");
+    setUsername(profile.username || "");
+    setSubject(profile.subject || []);
+    setExperience(profile.experience || "");
+    setIsEditOpen(true);
+  }
+};
 
-  const handleSaveEdit = async () => {
-    if (!profile) return;
+const handleSaveEdit = async () => {
+  if (!profile) return;
 
-    try {
-      await updateUserProfileAPI(profile._id, {
+  try {
+    await updateUserProfileAPI(profile._id, {
         fullname,
         email,
         username,
         subject,
         experience
-      });
+    });
 
-      toast({
+    toast({
         title: "Thành công!",
         description: "Đã cập nhật profile thành công",
         className: "bg-green-100 border-green-500 text-green-800"
-      });
+    });
 
-      setIsEditOpen(false);
-      await loadProfile(); // Reload lại dữ liệu
-    } catch (error: any) {
+    setIsEditOpen(false);
+    await loadProfile(); // Reload lại dữ liệu
+  } catch (error: any) {
       toast({
         title: "Lỗi",
         description: error.response?.data?.message || "Không thể cập nhật profile",
         variant: "destructive"
-      });
-    }
-  };
+    });
+  }
+};
 
-  const handleAddSubject = () => {
-    if (subjectInput.trim() && !subject.includes(subjectInput.trim())) {
-      setSubject([...subject, subjectInput.trim()]);
-      setSubjectInput("");
-    }
-  };
+const handleAddSubject = () => {
+  if (subjectInput.trim() && !subject.includes(subjectInput.trim())) {
+    setSubject([...subject, subjectInput.trim()]);
+    setSubjectInput("");
+  }
+};
 
-  const handleRemoveSubject = (sub: string) => {
-    setSubject(subject.filter(s => s !== sub));
-  };
+const handleRemoveSubject = (sub: string) => {
+  setSubject(subject.filter(s => s !== sub));
+};
   
   // Hàm trợ giúp để format thời gian và ngày từ ISO string
-  const formatTime = (isoString: string | undefined) => {
-    if (!isoString) return 'N/A';
-    try {
-        const date = new Date(isoString);
-        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    } catch (e) { return 'N/A'; }
-  };
-  
-  const formatDate = (isoString: string | undefined) => {
-    if (!isoString) return 'N/A';
-    try {
-        const date = new Date(isoString);
-        return date.toLocaleDateString('vi-VN');
-    } catch (e) { return 'N/A'; }
-  };
+  // Hàm trợ giúp để format thời gian và ngày từ ISO string
+const formatTimeRange = (isoString: string, duration: number) => {
+    if (!isoString) return 'N/A';
+    try {
+        const startDate = new Date(isoString);
+        const endDate = new Date(startDate.getTime() + duration * 60 * 1000); // Thêm duration (phút) vào startTime
+        
+        const startTime = startDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const endTime = endDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        
+        return `${startTime} - ${endTime}`;
+    } catch (e) { return 'N/A'; }
+};
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <p>Đang tải...</p>
-        </div>
-      </Layout>
-    );
-  }
+const formatDate = (isoString: string | undefined) => {
+    if (!isoString) return 'N/A';
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('vi-VN');
+    } catch (e) { return 'N/A'; }
+};
 
-  if (!profile) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <p>Không tìm thấy thông tin</p>
-        </div>
-      </Layout>
-    );
-  }
+if (loading) {
+  return (
+    <Layout>
+      <div className="container mx-auto px-4 py-8">
+        <p>Đang tải...</p>
+      </div>
+    </Layout>
+  );
+}
 
-  const initials = profile.fullname
-    .split(" ")
-    .map(n => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+if (!profile) {
+  return (
+    <Layout>
+      <div className="container mx-auto px-4 py-8">
+        <p>Không tìm thấy thông tin</p>
+      </div>
+    </Layout>
+  );
+}
+
+const initials = profile.fullname
+  .split(" ")
+  .map(n => n[0])
+  .join("")
+  .toUpperCase()
+  .slice(0, 2);
     
   return (
     <Layout>
@@ -375,59 +419,68 @@ const Profile = () => {
               
               {/* HIỂN THỊ DỮ LIỆU BOOKING TỪ STATE */}
               {loadingSchedule ? (
-                <p className="text-sm text-center text-muted-foreground">Đang tải lịch học...</p>
-              ) : schedule.length === 0 ? (
-                <p className="text-sm text-center text-muted-foreground">Không có lịch học sắp tới nào.</p>
-              ) : (
-                <div className="space-y-3">
-                  {schedule.map((item, index) => (
+        <p className="text-sm text-center text-muted-foreground">Đang tải lịch học...</p>
+    ) : schedule.length === 0 ? (
+        <p className="text-sm text-center text-muted-foreground">Không có buổi học sắp tới nào.</p>
+    ) : (
+        <div className="space-y-3">
+            {schedule.map((enrollment, index) => {
+                const item = enrollment.meeting; // Lấy thông tin Meeting
+                return (
                     <div key={item._id}>
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-card-foreground font-medium">
-                          Tutor: {item.tutorId.fullname || item.tutorId.username}
-                        </span>
+                        <div className="flex justify-between items-start mb-1">
+                            <span className="text-card-foreground font-bold">
+                                {item.title}
+                            </span>
+                            
+                            {/* Hiển thị Badge theo trạng thái */}
+                            {getStatusBadge(item.status)}
+                        </div>
                         
-                        {/* Hiển thị Badge theo trạng thái */}
-                        {getStatusBadge(item.status)}
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground">
-                        Môn học: 
-                        <span className="font-medium text-card-foreground ml-1">
-                            {item.tutorId.subject && item.tutorId.subject.length > 0
-                                ? item.tutorId.subject[0]
-                                : "Chưa rõ"}
-                        </span>
-                      </p>
-                      
-                      <p className="text-sm text-muted-foreground">
-                        Thời gian:&nbsp;
-                        {/* IN ĐẬM CẢ THỜI GIAN VÀ NGÀY */}
-                        <span className="font-bold text-card-foreground">
-                            {formatTime(item.startTime)} - {formatTime(item.endTime)} | {formatDate(item.startTime)}
-                        </span>
-                      </p>
-                      
-                      {/* DÒNG MỚI: Hình thức và địa điểm */}
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        {item.meetingType === 'online' ? (
-                            <>
-                                <Video className="h-4 w-4 text-green-500" /> Google Meet
-                            </>
-                        ) : (
-                            <>
-                                <MapPin className="h-4 w-4 text-red-500" /> H6-101
-                            </>
-                        )}
-                      </p>
+                        <p className="text-sm text-muted-foreground">
+                            Gia sư: 
+                            <span className="font-medium text-card-foreground ml-1">
+                                {item.tutor.fullname || item.tutor.username}
+                            </span>
+                        </p>
+                        
+                        <p className="text-sm text-muted-foreground">
+                            Thời gian:&nbsp;
+                            <span className="font-bold text-card-foreground">
+                                {formatTimeRange(item.startTime, item.duration)} | {formatDate(item.startTime)}
+                            </span>
+                        </p>
+                        
+                        {/* DÒNG MỚI: Hình thức và Địa điểm/Link */}
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            {item.type === 'online' ? (
+                                <>
+                                    <Video className="h-4 w-4 text-green-500" /> 
+                                    <a 
+                                        href={item.meetingLink} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline font-medium"
+                                    >
+                                        Tham gia Online
+                                    </a>
+                                </>
+                            ) : (
+                                <>
+                                    <MapPin className="h-4 w-4 text-red-500" /> 
+                                    <span className="font-medium text-card-foreground">{item.location || "Chưa rõ địa điểm"}</span>
+                                </>
+                            )}
+                        </p>
 
-                      {/* Thêm Separator sau mỗi item, trừ item cuối cùng */}
-                      {index < schedule.length - 1 && <Separator className="mt-3" />}
+                        {/* Thêm Separator sau mỗi item, trừ item cuối cùng */}
+                        {index < schedule.length - 1 && <Separator className="mt-3" />}
                     </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+                );
+            })}
+        </div>
+    )}
+</Card>
           </div>
         </div>
 

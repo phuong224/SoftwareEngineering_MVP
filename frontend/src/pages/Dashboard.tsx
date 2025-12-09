@@ -17,120 +17,136 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getStudentBookingsAPI } from "@/service/booking.service";
+import { getStudentEnrollmentsAPI } from "@/service/meeting.service";
 
 const CURRENT_STUDENT_ID = "69292f0a423919adced2aa8b";
-
-interface Appointment {
-  _id: string;
-  tutorId: {
-    _id: string;
-    username: string;
-    fullname?: string;
-    subject?: string[];
-  };
-  startTime?: string;
-  endTime?: string;
-  meetingType: "online" | "offline";
-  status: "pending" | "confirmed" | "cancelled" | "draft" | "completed";
-  note?: string;
+interface MeetingItem {
+    _id: string;
+    title: string;
+    description?: string;
+    startTime: string; 
+    duration: number; // Tính bằng phút
+    type: 'online' | 'offline';
+    status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+    meetingLink?: string;
+    location?: string;
+    tutor: { 
+        _id: string;
+        username: string;
+        fullname?: string;
+        subject?: string[]; 
+    };
+}
+interface EnrollmentItem {
+    _id: string;
+    student: string; // ID sinh viên
+    meeting: MeetingItem; // Thông tin buổi học chi tiết
+    status: 'registered' | 'attended' | 'cancelled'; // Trạng thái Enrollment theo Mongoose Schema mới
+    createdAt: string;
 }
 
-type ClassStatus = "scheduled" | "completed";
+type ClassStatus = "scheduled" | "completed" | 'cancelled'; 
 
 interface RegisteredClass {
-  id: string;
-  code: string;
-  title: string;
-  date: string;
-  time: string;
-  type: "online" | "offline";
-  location: string;
-  status: ClassStatus;
-  tutorName?: string;
+  id: string; // ID của Enrollment (Dùng làm key và selected ID)
+  meetingId: string; // ID của Meeting
+  code: string;
+  title: string;
+  date: string;
+  time: string;
+  type: "online" | "offline";
+  location: string;
+  status: ClassStatus;
+  tutorName?: string;
 }
 
 const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // Helper function to convert Appointment to RegisteredClass
-const convertAppointmentToClass = (apt: Appointment): RegisteredClass => {
-  const startDate = apt.startTime ? new Date(apt.startTime) : new Date();
-  const endDate = apt.endTime ? new Date(apt.endTime) : new Date();
-  
-  const dateStr = format(startDate, "yyyy-MM-dd");
-  const timeStr = apt.startTime && apt.endTime
-    ? `${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")}`
-    : "Chưa có giờ";
-  
-  const subject = Array.isArray(apt.tutorId?.subject) && apt.tutorId.subject.length > 0
-    ? apt.tutorId.subject[0]
-    : "Môn học";
-  
-  const tutorName = apt.tutorId?.fullname || apt.tutorId?.username || "Tutor";
-  const location = apt.meetingType === "online" ? "Google Meet" : "H6-101";
-  
-  // Map status: pending/confirmed -> scheduled, completed -> completed
-  // Note: cancelled and draft appointments are filtered out before this function is called
-  const status: ClassStatus = 
-    (apt.status === "pending" || apt.status === "confirmed") ? "scheduled" : "completed";
-  
-  return {
-    id: apt._id,
-    code: subject.substring(0, 8).toUpperCase(),
-    title: subject,
-    date: dateStr,
-    time: timeStr,
-    type: apt.meetingType,
-    location: location,
-    status: status,
-    tutorName: tutorName,
-  };
+// Helper function to convert Enrollment to RegisteredClass
+const convertEnrollmentToClass = (enrollment: EnrollmentItem): RegisteredClass => {
+  const meeting = enrollment.meeting;
+
+  const startDate = new Date(meeting.startTime);
+  // Tính toán thời gian kết thúc: startTime + duration (phút)
+  const endDate = new Date(startDate.getTime() + meeting.duration * 60 * 1000); 
+  
+  const dateStr = format(startDate, "yyyy-MM-dd");
+  const timeStr = `${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")}`;
+  
+  const subject = Array.isArray(meeting.tutor?.subject) && meeting.tutor.subject.length > 0
+    ? meeting.tutor.subject[0]
+    : meeting.title;
+  
+  const tutorName = meeting.tutor?.fullname || meeting.tutor?.username || "Tutor";
+  const location = meeting.type === "online" ? "Google Meet" : (meeting.location || "H6-101");
+  
+  // Map status DỰA TRÊN CẢ MEETING VÀ ENROLLMENT STATUS
+  let classStatus: ClassStatus;
+  if (enrollment.status === 'cancelled' || meeting.status === 'cancelled') {
+    classStatus = 'cancelled';
+  } else if (meeting.status === 'completed' && enrollment.status === 'attended') {
+    classStatus = 'completed';
+  } else {
+    // Bao gồm 'registered', 'scheduled', 'ongoing'
+    classStatus = 'scheduled'; 
+  }
+
+  
+  return {
+    id: enrollment._id, // ID của Enrollment
+    meetingId: meeting._id, // ID của Meeting
+    code: subject.substring(0, 8).toUpperCase(),
+    title: meeting.title,
+    date: dateStr,
+    time: timeStr,
+    type: meeting.type,
+    location: location,
+    status: classStatus,
+    tutorName: tutorName,
+  };
 };
 
 const Dashboard = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [enrollments, setEnrollments] = useState<EnrollmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadAppointments();
-  }, []);
+    loadEnrollments();
+  }, []);
 
-  const loadAppointments = async () => {
+  const loadEnrollments = async () => {
     try {
       setLoading(true);
-      const data = await getStudentBookingsAPI(CURRENT_STUDENT_ID);
-      setAppointments(data);
+      const data: EnrollmentItem[] = await getStudentEnrollmentsAPI(CURRENT_STUDENT_ID);
+      setEnrollments(data);
       
-      // Set default selected to first upcoming appointment
-      const upcoming = data
-        .filter(apt => apt.status === "pending" || apt.status === "confirmed")
-        .sort((a, b) => {
-          const dateA = a.startTime ? new Date(a.startTime).getTime() : 0;
-          const dateB = b.startTime ? new Date(b.startTime).getTime() : 0;
-          return dateA - dateB;
-        });
-      if (upcoming.length > 0) {
-        setSelectedClassId(upcoming[0]._id);
-      }
-    } catch (error) {
-      console.error("Lỗi tải dữ liệu:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Set default selected to first upcoming enrollment
+      const upcoming = data
+        .filter(e => e.meeting.status === "scheduled" || e.meeting.status === "ongoing")
+        .sort((a, b) => {
+          const dateA = new Date(a.meeting.startTime).getTime();
+          const dateB = new Date(b.meeting.startTime).getTime();
+          return dateA - dateB;
+        });
+      if (upcoming.length > 0) {
+        setSelectedClassId(upcoming[0]._id); // Sử dụng Enrollment ID
+      }
+    } catch (error) {
+      console.error("Lỗi tải dữ liệu:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const classSchedule = useMemo(() => {
-    return appointments
-      .filter(apt => 
-        apt.startTime && 
-        apt.endTime && 
-        apt.status !== "cancelled" && 
-        apt.status !== "draft" // Filter out cancelled and draft appointments
-      )
-      .map(convertAppointmentToClass);
-  }, [appointments]);
+    return enrollments
+      // Chỉ lấy những buổi học có đủ thông tin và không bị hủy
+      .filter(e => e.meeting.startTime && e.meeting.duration > 0)
+      .map(convertEnrollmentToClass);
+  }, [enrollments]);
 
   const scheduleByDate = useMemo(() => {
     return classSchedule.reduce<Record<string, RegisteredClass[]>>((acc, cls) => {
@@ -270,7 +286,7 @@ const Dashboard = () => {
                           )}
                         </div>
                         <div className="mt-2 space-y-1">
-                          {items.slice(0, 2).map((cls) => (
+                          {items.filter(cls => cls.status !== 'cancelled').slice(0, 2).map((cls) => (
                             <Badge
                               key={cls.id}
                               variant="outline"
@@ -284,7 +300,7 @@ const Dashboard = () => {
                               {cls.title.length > 10 ? cls.title.substring(0, 10) + "..." : cls.title}
                             </Badge>
                           ))}
-                          {items.length > 2 && (
+                          {items.filter(cls => cls.status !== 'cancelled').length > 2 && (
                             <p className="text-[11px] text-muted-foreground">+{items.length - 2} lớp</p>
                           )}
                         </div>
