@@ -44,7 +44,7 @@ Bạn có thể chạy dự án theo hai cách: sử dụng Docker (khuyến kh�
 2.  **Khởi chạy:** Mở terminal tại thư mục gốc của dự án và chạy lệnh sau:
 
     ```bash
-    docker build --no-cache -t tutor-support-system .
+    docker build -t tutor-support-system .
     docker run -p 4000:4000 tutor-support-system
     ```
 

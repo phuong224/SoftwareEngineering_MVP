@@ -312,41 +312,60 @@ const Dashboard = () => {
             </Card>
 
             {selectedClass && (
-              <Card className="border border-primary/20 bg-primary/5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Buổi học đã chọn</p>
-                    <h3 className="text-2xl font-semibold text-foreground">
-                      {selectedClass.title}
-                    </h3>
-                    <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                      <p>
-                        Ngày:{" "}
-                        {format(new Date(selectedClass.date), "EEE dd/MM/yyyy", { locale: vi })}
-                      </p>
-                      <p>Hình thức: {selectedClass.type === "online" ? "Online" : "Offline"}</p>
-                      {selectedClass.tutorName && (
-                        <p>Tutor: {selectedClass.tutorName}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-primary/40 bg-background p-4 text-sm text-muted-foreground">
-                    <p className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-primary" />
-                      {selectedClass.time}
-                    </p>
-                    <p className="mt-2 flex items-center gap-2">
-                      {selectedClass.type === "online" ? (
-                        <Video className="h-4 w-4 text-primary" />
-                      ) : (
-                        <MapPin className="h-4 w-4 text-primary" />
-                      )}
-                      {selectedClass.location}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
+  <Card className="border border-primary/10 bg-primary/5 shadow-sm rounded-2xl p-6">
+    <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+
+      {/* Left info */}
+      <div className="space-y-2">
+        <h3 className="text-2xl font-bold text-foreground tracking-tight">
+          {selectedClass.title}
+        </h3>
+
+        <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+          <p>
+            Ngày:{" "}
+            {format(new Date(selectedClass.date), "EEE dd/MM/yyyy", { locale: vi })}
+          </p>
+
+          <p>
+            Hình thức:{" "}
+            <span className="font-medium text-foreground">
+              {selectedClass.type === "online" ? "Online" : "Offline"}
+            </span>
+          </p>
+
+          {selectedClass.tutorName && (
+            <p>
+              Tutor:{" "}
+              <span className="font-medium text-foreground">
+                {selectedClass.tutorName}
+              </span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Right info */}
+      <div className="rounded-xl border border-primary/20 bg-background shadow-inner p-4 text-sm text-muted-foreground md:min-w-[220px]">
+        <p className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-primary" />
+          <span className="font-medium text-foreground">{selectedClass.time}</span>
+        </p>
+
+        <p className="mt-3 flex items-center gap-2">
+          {selectedClass.type === "online" ? (
+            <Video className="h-4 w-4 text-primary" />
+          ) : (
+            <MapPin className="h-4 w-4 text-primary" />
+          )}
+          <span className="font-medium text-foreground">{selectedClass.location}</span>
+        </p>
+      </div>
+
+    </div>
+  </Card>
+)}
+
           </div>
 
           <div className="space-y-6">
