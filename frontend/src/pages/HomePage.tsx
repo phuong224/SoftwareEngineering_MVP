@@ -8,7 +8,7 @@ const HomePage = () => {
         {/* Background Image */}
         <div className="absolute inset-0">
           <img 
-            src="/hcmut.jpg" 
+            src="/hcmut_pdt.png" 
             alt="HCMUT Campus" 
             className="w-full h-full object-cover"
           />
@@ -24,7 +24,7 @@ const HomePage = () => {
               alt="HCMUT Logo" 
               className="w-8 h-8 object-contain"
             />
-            <span className="text-xl font-bold text-primary">HCMUT</span>
+            <span className="text-xl font-bold text-blue-700 tracking-wide">HCMUT TUTOR</span>
           </div>
         </div>
 
@@ -36,7 +36,7 @@ const HomePage = () => {
         </div>
 
         {/* Main Content */}
-        <div className="relative z-10 h-full flex items-center justify-center">
+        {/* <div className="relative z-4 h-full flex items-center justify-center">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white drop-shadow-lg">
               HCMUT MENTORING
@@ -45,7 +45,7 @@ const HomePage = () => {
               Personalized learning platform to develop skills and in-depth knowledge
             </p>
           </div>
-        </div>
+        </div> */}
       </section>
 
     </Layout>

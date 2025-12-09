@@ -5,6 +5,8 @@ dotenv.config({
     path: './.env'
 });
 
+
+
 const startServer = async() => {
     try {
         await connectDB();
@@ -22,4 +24,9 @@ const startServer = async() => {
     }
 }
 
+
+
 startServer();
+
+
+
