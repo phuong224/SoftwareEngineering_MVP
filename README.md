@@ -1,6 +1,6 @@
-# Hệ thống Điểm danh Sinh viên (MVP)
+# Hệ thống Tutor/Mentor (MVP)
 
-Đây là sản phẩm MVP (Minimum Viable Product) cho bài tập lớn môn học Software Engineering. Dự án xây dựng một hệ thống đơn giản cho phép sinh viên tham gia và quản lý các buổi học của mình.
+Đây là sản phẩm MVP (Minimum Viable Product) cho bài tập lớn môn học Software Engineering. Dự án xây dựng một MVP đơn giản cho phép sinh viên tham gia buổi tư vấn hoặc hủy buổi tư vấn.
 
 ## 📂 Cấu trúc thư mục
 
