@@ -81,7 +81,7 @@ Nếu bạn không muốn sử dụng Docker, bạn có thể chạy backend và
     ```
 3.  Khởi động ứng dụng React:
     ```bash
-    npm start
+    npm run dev
     ```
 
 ---
