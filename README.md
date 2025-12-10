@@ -8,7 +8,7 @@ Dự án được tổ chức với các thư mục chính sau:
 
 -   `backend/`: Chứa toàn bộ mã nguồn cho phần máy chủ (server), bao gồm API, logic xử lý và kết nối cơ sở dữ liệu.
 -   `frontend/`: Chứa toàn bộ mã nguồn cho phần giao diện người dùng (client) được xây dựng bằng React.
--   `docker-compose.yml`: File cấu hình để triển khai toàn bộ ứng dụng (backend, frontend, database) bằng Docker.
+-   `Dockerfile`: Triển khai toàn bộ ứng dụng (backend, frontend, database) bằng Docker.
 
 ## ✨ Các chức năng chính (MVP)
 
